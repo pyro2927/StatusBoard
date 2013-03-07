@@ -1,46 +1,38 @@
 
 require 'rubygems'
 require 'sinatra'
+require 'data_mapper'
+require 'gravatar-ultimate'
+require 'pry'
+
+# setup datamapper
+DataMapper.setup(:default, ENV['DATABASE_URL'] || "sqlite://#{Dir.pwd}/dev.db")
+
+class StatusUpdate
+  include DataMapper::Resource
+  property :id,         Serial
+  property :user,       String
+  property :body,       Text
+end
+
+# finish datamapper
+DataMapper.finalize
+DataMapper.auto_upgrade!
 
 configure do
   set :public_folder, Proc.new { File.join(root, "static") }
   enable :sessions
 end
 
-helpers do
-  def username
-    session[:identity] ? session[:identity] : 'Hello stranger'
-  end
-end
-
-before '/secure/*' do
-  if !session[:identity] then
-    session[:previous_url] = request.path
-    @error = 'Sorry guacamole, you need to be logged in to visit ' + request.path
-    halt erb(:login_form)
-  end
-end
-
 get '/' do
-  erb 'Can you handle a <a href="/secure/place">secret</a>?'
+  @updates = StatusUpdate.all
+  erb :index
 end
 
-get '/login/form' do 
-  erb :login_form
-end
-
-post '/login/attempt' do
-  session[:identity] = params['username']
-  where_user_came_from = session[:previous_url] || '/'
-  redirect to where_user_came_from 
-end
-
-get '/logout' do
-  session.delete(:identity)
-  erb "<div class='alert alert-message'>Logged out</div>"
-end
-
-
-get '/secure/place' do
-  erb "This is a secret place that only <%=session[:identity]%> has access to!"
+post '/update' do
+  hash = JSON.parse(self.request.body.read)
+  update = StatusUpdate.new
+  update.user = hash["user"]
+  update.body = hash["body"]
+  update.save
 end

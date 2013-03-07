@@ -1,0 +1,7 @@
+<% @updates.each do |update| %>
+	<div class="row">
+		<div class="span3"><%= update.user %></div>
+		<div class="span1"><img src="<%= Gravatar.new(update.user).image_url %>"></div>
+		<div class="span8"><%= update.body %></div>
+	</div>
+<% end %>
